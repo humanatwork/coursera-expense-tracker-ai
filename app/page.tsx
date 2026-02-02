@@ -3,17 +3,18 @@
 import { useState, useEffect } from 'react';
 import { Expense } from '@/types/expense';
 import { storage } from '@/lib/storage';
-import { exportToCSV } from '@/lib/utils';
 import { Dashboard } from '@/components/Dashboard';
 import { ExpenseForm } from '@/components/ExpenseForm';
 import { ExpenseList } from '@/components/ExpenseList';
 import { Modal } from '@/components/Modal';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { CloudExportHub } from '@/components/CloudExportHub';
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCloudExportOpen, setIsCloudExportOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses'>('dashboard');
 
@@ -40,10 +41,6 @@ export default function Home() {
     setExpenses(newExpenses);
   };
 
-  const handleExportCSV = () => {
-    exportToCSV(expenses);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -60,8 +57,28 @@ export default function Home() {
             </div>
             <div className="flex gap-2">
               {expenses.length > 0 && (
-                <Button variant="secondary" onClick={handleExportCSV}>
-                  Export CSV
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsCloudExportOpen(true)}
+                  className="relative"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2 inline"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  Export & Share
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    Pro
+                  </span>
                 </Button>
               )}
               <Button onClick={() => setIsAddModalOpen(true)}>
@@ -172,6 +189,13 @@ export default function Home() {
           />
         )}
       </Modal>
+
+      {/* Cloud Export Hub */}
+      <CloudExportHub
+        isOpen={isCloudExportOpen}
+        onClose={() => setIsCloudExportOpen(false)}
+        expenses={expenses}
+      />
     </div>
   );
 }
