@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Expense } from '@/types/expense';
 import { storage } from '@/lib/storage';
-import { exportToCSV } from '@/lib/utils';
 import { Dashboard } from '@/components/Dashboard';
 import { ExpenseForm } from '@/components/ExpenseForm';
 import { ExpenseList } from '@/components/ExpenseList';
@@ -40,10 +39,6 @@ export default function Home() {
     setExpenses(newExpenses);
   };
 
-  const handleExportCSV = () => {
-    exportToCSV(expenses);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -59,11 +54,6 @@ export default function Home() {
               </p>
             </div>
             <div className="flex gap-2">
-              {expenses.length > 0 && (
-                <Button variant="secondary" onClick={handleExportCSV}>
-                  Export CSV
-                </Button>
-              )}
               <Button onClick={() => setIsAddModalOpen(true)}>
                 Add Expense
               </Button>
