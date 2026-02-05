@@ -1,138 +1,93 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
-This is a modern expense tracking web application built with Next.js 14, TypeScript, and Tailwind CSS. The application helps users manage their personal finances by tracking expenses across different categories, providing analytics, and offering export capabilities.
+Client-side expense tracking app. Next.js 14 (App Router), TypeScript (strict), React 19, Tailwind CSS v4. All data persists in localStorage — there is no backend, no API, no database, no authentication. This is a demo/portfolio project.
 
-## Development Commands
+## Commands
 
-- `npm run dev` - Start development server at http://localhost:3000
-- `npm run build` - Create production build
-- `npm run start` - Run production server
-- `npm run lint` - Run ESLint to check code quality
+```bash
+npm run dev       # Dev server at http://localhost:3000
+npm run build     # Production build — primary correctness check
+npm run lint      # ESLint with Next.js core-web-vitals + TypeScript rules
+```
+
+There is no test suite. No unit, integration, or e2e tests exist.
+
+## Verification
+
+After any code change, run `npm run build` to verify correctness. This catches TypeScript errors, unused variables, and Next.js-specific issues that `npm run lint` alone misses. Treat build failure as a blocking issue.
 
 ## Architecture
 
-### Tech Stack
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript for type safety
-- **Styling**: Tailwind CSS v4
-- **State Management**: React hooks (useState, useEffect)
-- **Data Persistence**: localStorage (client-side only)
-
-### Project Structure
-
-```
-├── app/                    # Next.js App Router
-│   ├── layout.tsx          # Root layout with metadata
-│   ├── page.tsx            # Main application page (client component)
-│   └── globals.css         # Global styles with Tailwind
-├── components/             # React components
-│   ├── Button.tsx          # Reusable button with variants
-│   ├── Card.tsx            # Container component
-│   ├── Dashboard.tsx       # Analytics dashboard with summary cards
-│   ├── ExpenseForm.tsx     # Form for add/edit with validation
-│   ├── ExpenseList.tsx     # List view with filtering
-│   ├── Input.tsx           # Form input with error handling
-│   ├── Modal.tsx           # Modal dialog component
-│   └── Select.tsx          # Dropdown select component
-├── lib/                    # Utilities and helpers
-│   ├── storage.ts          # localStorage CRUD operations
-│   └── utils.ts            # Helper functions (formatting, calculations, export)
-└── types/                  # TypeScript definitions
-    └── expense.ts          # Expense types and interfaces
-```
-
-### Data Model
-
-The core data type is `Expense`:
-```typescript
-interface Expense {
-  id: string;              // Unique identifier
-  date: string;            // ISO date string
-  amount: number;          // Expense amount
-  category: ExpenseCategory; // One of 6 predefined categories
-  description: string;     // User-provided description
-  createdAt: string;       // ISO timestamp
-  updatedAt: string;       // ISO timestamp
-}
-```
-
-Categories: Food, Transportation, Entertainment, Shopping, Bills, Other
-
-### Key Features
-
-1. **Dashboard Tab**
-   - Summary cards: total spending, monthly total, top category, average per transaction
-   - Category breakdown with visual progress bars
-   - Recent expenses list (last 5)
-
-2. **All Expenses Tab**
-   - Filterable list (search, category, date range)
-   - Edit and delete functionality
-   - No expenses state
-
-3. **Expense Management**
-   - Add expense via modal with validation
-   - Edit existing expenses (opens in modal)
-   - Delete with confirmation
-   - Form validation: required fields, positive amounts, valid dates
-
-4. **Data Export**
-   - CSV export of all expenses
-   - Includes date, amount, category, description
-
 ### State Management
 
-The main page (`app/page.tsx`) manages all application state:
-- `expenses`: Array of all expenses (synced with localStorage)
-- `isAddModalOpen`: Controls add expense modal
-- `editingExpense`: Holds expense being edited
-- `activeTab`: Current tab ('dashboard' | 'expenses')
+All application state lives in `app/page.tsx` (the sole `'use client'` component) and flows down via props. There is no React Context, no state library, and no server components beyond the root layout. Maintain this centralized pattern — do not introduce Context, Zustand, Redux, or similar without explicit instruction.
 
-All state changes trigger localStorage updates via the `storage` utility.
+### Storage Layer
 
-### Data Flow
+`lib/storage.ts` provides synchronous CRUD over localStorage (key: `expense-tracker-data`). The interface is intentionally decoupled — to swap backends, replace only this file while keeping the same function signatures. The rest of the app will work unchanged.
 
-1. On mount: Load expenses from localStorage
-2. On add/edit/delete: Update localStorage, then update state
-3. Components receive expenses and callbacks as props
-4. Forms handle their own validation state
+### Cloud Export System — MOCKED
 
-### Styling Approach
+IMPORTANT: `CloudExportHub.tsx` and `lib/cloud-export-utils.ts` implement a full cloud export UI (Google Drive, Dropbox, OneDrive, Email, Google Sheets), but **all cloud interactions are simulated**. Functions like `connectToCloudProvider()` and `exportToCloud()` use `setTimeout` to fake async responses. Do not wire these to real APIs unless explicitly asked.
 
-- Utility-first with Tailwind CSS
-- Responsive design (mobile-first)
-- Component-level styling with props-based variants
-- Color-coded categories for visual distinction
-- Professional blue/gray color scheme
+### Component Layers
 
-## Making Changes
+- **Primitives** (`Button`, `Card`, `Input`, `Select`, `Modal`): Generic UI components with prop-based variants. Extend these when adding new UI elements.
+- **Features** (`Dashboard`, `ExpenseList`, `ExpenseForm`, `CloudExportHub`): Business logic components that receive data and callbacks as props from `page.tsx`.
 
-### Adding a New Category
+### Path Aliases
 
-1. Update `ExpenseCategory` type in `types/expense.ts`
-2. Add category to `categoryColors` in `Dashboard.tsx` and `ExpenseList.tsx`
-3. Add to categories array in `ExpenseForm.tsx`
+Use `@/*` imports (mapped to project root in `tsconfig.json`). Example: `import { cn } from '@/lib/utils'`.
 
-### Adding New Fields to Expenses
+## Key Conventions
 
-1. Update `Expense` interface in `types/expense.ts`
-2. Update `ExpenseFormData` interface
-3. Modify `ExpenseForm.tsx` to include new fields
-4. Update `ExpenseList.tsx` and `Dashboard.tsx` to display new data
-5. Update CSV export in `lib/utils.ts`
+### Category Colors Are Defined in Multiple Files
 
-### Changing Storage Backend
+Category-to-color mappings exist independently in three places and must stay in sync:
+- `Dashboard.tsx` — `categoryColors` object (progress bars)
+- `ExpenseList.tsx` — `categoryColors` object (badges)
+- `ExpenseForm.tsx` — categories array (dropdown options)
 
-Replace `lib/storage.ts` functions while maintaining the same interface. The rest of the app will work without changes.
+Current mapping: Food=green, Transportation=blue, Entertainment=purple, Shopping=pink, Bills=yellow, Other=gray.
 
-## Notes
+### Class Merging
 
-- This is a demo app using localStorage - data is client-side only
-- No authentication or user management
-- No backend API - fully client-side
-- Mobile-responsive but optimized for desktop use
-- Browser localStorage limits apply (~5-10MB depending on browser)
+`lib/utils.ts` exports `cn()` for conditional Tailwind class merging. Always use it instead of manual string concatenation: `cn('base', condition && 'conditional')`.
+
+### Tailwind CSS v4
+
+This project uses Tailwind v4 with `@tailwindcss/postcss`. There is **no `tailwind.config.js`** — theme configuration lives in CSS variables in `app/globals.css`. Do not create a Tailwind config file.
+
+## Workflows
+
+### Adding a New Expense Category
+
+1. Add to `ExpenseCategory` union in `types/expense.ts`
+2. Add color entry to `categoryColors` in **both** `Dashboard.tsx` and `ExpenseList.tsx`
+3. Add to the categories array in `ExpenseForm.tsx`
+4. Run `npm run build` to catch exhaustiveness errors
+
+### Adding a New Field to Expenses
+
+1. Add field to `Expense` interface in `types/expense.ts`
+2. If user-editable, also add to `ExpenseFormData`
+3. Add form control to `ExpenseForm.tsx`
+4. Display in `ExpenseList.tsx` and/or `Dashboard.tsx` as appropriate
+5. Include in CSV export in `lib/utils.ts` → `exportToCSV()`
+6. Run `npm run build`
+
+### Replacing the Storage Backend
+
+Replace the functions in `lib/storage.ts` while preserving the same signatures (`getExpenses`, `saveExpenses`, `addExpense`, `updateExpense`, `deleteExpense`, `clearAll`). No other files need changes.
+
+## Gotchas
+
+- **No SSR**: `page.tsx` is a client component. localStorage access is in `useEffect`. Do not add server-side data fetching or server actions without restructuring the component hierarchy.
+- **No tests**: Changes cannot be verified by tests. `npm run build` is the only automated quality gate.
+- **Cloud features are fake**: The entire export hub returns simulated success responses after artificial delays. Treat it as a UI prototype.
+- **ID generation is not secure**: `generateId()` uses `Date.now().toString(36)` + random suffix. Fine for local demos, not for production multi-user scenarios.
+- **Data is ephemeral**: localStorage can be cleared by the browser at any time. No backup, sync, or recovery mechanism exists.
+- **Duplicate category maps**: Changing a category color in one file but not the others will cause visual inconsistency. See "Category Colors" above.
+- **Empty `hooks/` directory**: Exists but contains no files. Created as a placeholder for future custom React hooks.
